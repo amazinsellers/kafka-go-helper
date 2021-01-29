@@ -13,13 +13,13 @@ type KafkaConsumer struct {
 	TopicHandlers TopicHandlers
 }
 
-func NewKafkaConsumer(servers string) (consumer *KafkaConsumer, err error) {
+func NewKafkaConsumer(servers string, groupId string) (consumer *KafkaConsumer, err error) {
 	consumer = &KafkaConsumer{}
 	fmt.Println("Connecting to kafka")
 
 	c, err := kafka.NewConsumer(&kafka.ConfigMap{
 		"bootstrap.servers": servers,
-		"group.id":          "amazon",
+		"group.id":          groupId,
 		"auto.offset.reset": "earliest",
 	})
 
