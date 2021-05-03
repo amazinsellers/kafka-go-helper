@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
+	"time"
 )
 
 func SetKafkaDeliveryReportHandler(p kafka.Producer) {
@@ -19,13 +20,31 @@ func SetKafkaDeliveryReportHandler(p kafka.Producer) {
 	}
 }
 
-func Produce(p kafka.Producer, topic Topic, event interface{}) {
+func Produce(p kafka.Producer, topic Topic, event interface{}) error {
 	eventJson, _ := json.Marshal(event)
 
-	_ = p.Produce(&kafka.Message{
-		TopicPartition: kafka.TopicPartition{Topic: topic.ToString(), Partition: kafka.PartitionAny},
-		Value:          []byte(eventJson),
-	}, nil)
+	err := error(nil)
+
+	for i := 0; i < 3; i++ {
+		err = p.Produce(&kafka.Message{
+			TopicPartition: kafka.TopicPartition{Topic: topic.ToString(), Partition: kafka.PartitionAny},
+			Value:          []byte(eventJson),
+		}, nil)
+
+		if err == nil {
+			return nil
+		}
+
+		fmt.Println(fmt.Sprintf("[producer.Produce] retry attempt: %d / error producing event: %s",
+			i+1, err.Error()))
+
+		retryIn := time.Duration((i+1) * 3)
+		time.Sleep(retryIn * time.Second)
+	}
+
+	fmt.Println(fmt.Sprintf("[producer.Produce] retry attempts failed / error producing event: %s",
+		err.Error()))
+	return err
 }
 
 func SetKafkaProducer(err error, servers string) *kafka.Producer {
