@@ -53,7 +53,7 @@ func (c KafkaConsumer) Consume() {
 	}
 }
 
-func (c KafkaConsumer) Subscribe() {
+func (c KafkaConsumer) Subscribe() error {
 	topics := make([]string, len(c.TopicHandlers))
 
 	i := 0
@@ -62,5 +62,19 @@ func (c KafkaConsumer) Subscribe() {
 		i++
 	}
 
-	c.Consumer.SubscribeTopics(topics, nil)
+	err := error(nil)
+
+	for i := 0; i < 5; i++ {
+		err = c.Consumer.SubscribeTopics(topics, nil)
+
+		if err == nil {
+			return nil
+		}
+
+		fmt.Println(fmt.Sprintf("error subscribing to topics. retrying (%d). %s", i + 1, err.Error()))
+		time.Sleep(time.Duration(2 * time.Second))
+	}
+
+	fmt.Println(fmt.Sprintf("error subscribing to topics. retry stopped: %s", err.Error()))
+	return err
 }
