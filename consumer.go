@@ -3,6 +3,7 @@ package events
 import (
 	"fmt"
 	"gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
+	"os"
 	"time"
 )
 
@@ -32,24 +33,29 @@ func NewKafkaConsumer(servers string, groupId string) (consumer *KafkaConsumer, 
 	return consumer, err
 }
 
-func (c KafkaConsumer) Consume() {
+func (c KafkaConsumer) Consume(sigs chan os.Signal) {
 	for {
-		time.Sleep(time.Duration(2 * time.Second))
-		msg, err := c.Consumer.ReadMessage(-1)
+		select {
+		case <-sigs:
+			fmt.Println("[kafka-go-helper/KafkaConsumer/Consume] Stop signal received")
+			return
+		case <-time.After(2 * time.Second):
+			msg, err := c.Consumer.ReadMessage(-1)
 
-		if err != nil {
-			// The client will automatically try to recover from all errors.
-			fmt.Printf("Consumer error: %v (%v)\n", err, msg)
-			continue
+			if err != nil {
+				// The client will automatically try to recover from all errors.
+				fmt.Printf("Consumer error: %v (%v)\n", err, msg)
+				continue
+			}
+
+			if aHandler, ok := c.TopicHandlers[*msg.TopicPartition.Topic]; ok {
+				fmt.Printf("Handling message for topic \"%s\": %s\n", *msg.TopicPartition.Topic, string(msg.Value))
+				_ = aHandler(msg.Value)
+				continue
+			}
+
+			fmt.Printf("No handlers found for Topic %s\n", *msg.TopicPartition.Topic)
 		}
-
-		if aHandler, ok := c.TopicHandlers[*msg.TopicPartition.Topic]; ok {
-			fmt.Printf("Handling message for topic \"%s\": %s\n", *msg.TopicPartition.Topic, string(msg.Value))
-			_ = aHandler(msg.Value)
-			continue
-		}
-
-		fmt.Printf("No handlers found for Topic %s\n", *msg.TopicPartition.Topic)
 	}
 }
 

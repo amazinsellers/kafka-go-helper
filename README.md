@@ -1,4 +1,4 @@
-#Kafka go helper
+# Kafka go helper
 
 Kafka go sdk is already robust. This little library enforces consumers to follow best practices.
 
