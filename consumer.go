@@ -33,11 +33,12 @@ func NewKafkaConsumer(servers string, groupId string) (consumer *KafkaConsumer, 
 	return consumer, err
 }
 
-func (c KafkaConsumer) Consume(sigs chan os.Signal) {
+func (c KafkaConsumer) Consume(stopSigs chan os.Signal, doneSig chan bool) {
 	for {
 		select {
-		case <-sigs:
+		case <-stopSigs:
 			fmt.Println("[kafka-go-helper/KafkaConsumer/Consume] Stop signal received")
+			doneSig <- true
 			return
 		case <-time.After(2 * time.Second):
 			msg, err := c.Consumer.ReadMessage(-1)
