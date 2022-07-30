@@ -33,6 +33,24 @@ func NewKafkaConsumer(servers string, groupId string) (consumer *KafkaConsumer, 
 	return consumer, err
 }
 
+func NewKafkaConsumerWithCustomConfig(servers string, groupId string, configMap kafka.ConfigMap) (consumer *KafkaConsumer, err error) {
+	consumer = &KafkaConsumer{}
+	fmt.Println("Connecting to kafka")
+
+	configMap["bootstrap.servers"] = servers
+	configMap["group.id"] = groupId
+
+	c, err := kafka.NewConsumer(&configMap)
+
+	consumer.Consumer = c
+
+	if err != nil {
+		panic(err)
+	}
+
+	return consumer, err
+}
+
 func (c KafkaConsumer) Consume(stopSigs chan os.Signal, doneSig chan bool) {
 	for {
 		select {
@@ -78,7 +96,7 @@ func (c KafkaConsumer) Subscribe() error {
 			return nil
 		}
 
-		fmt.Println(fmt.Sprintf("error subscribing to topics. retrying (%d). %s", i + 1, err.Error()))
+		fmt.Println(fmt.Sprintf("error subscribing to topics. retrying (%d). %s", i+1, err.Error()))
 		time.Sleep(time.Duration(2 * time.Second))
 	}
 
